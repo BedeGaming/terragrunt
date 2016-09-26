@@ -1,34 +1,48 @@
 package config
 
 import (
+	"fmt"
 	"io/ioutil"
-	"github.com/hashicorp/hcl"
-	"github.com/gruntwork-io/terragrunt/dynamodb"
-	"github.com/gruntwork-io/terragrunt/remote"
+
 	"github.com/gruntwork-io/terragrunt/errors"
+	"github.com/gruntwork-io/terragrunt/locks"
+	"github.com/gruntwork-io/terragrunt/remote"
+	"github.com/hashicorp/hcl"
 )
 
-const TERRAGRUNT_CONFIG_FILE = ".terragrunt"
+const configFilePath = ".terragrunt"
 
-// A common interface with all fields that could be in the .terragrunt config file.
-type TerragruntConfig struct {
-	DynamoDbLock *dynamodb.DynamoDbLock
-	RemoteState  *remote.RemoteState
+// Config represents a parsed and expanded configuration
+type Config struct {
+	Lock        locks.Lock
+	RemoteState *remote.RemoteState
+}
+
+// fileConfig represents the configuration supported in the .terragrunt file
+type fileConfig struct {
+	Lock        *LockConfig `json:"lock,omitempty"`
+	RemoteState *remote.RemoteState
+}
+
+// LockConfig represents generic configuration for Lock providers
+type LockConfig struct {
+	Backend string            `json:"backend"`
+	Config  map[string]string `json:"config"`
 }
 
 // Read the Terragrunt config file from its default location
-func ReadTerragruntConfig() (*TerragruntConfig, error) {
-	return parseTerragruntConfigFile(TERRAGRUNT_CONFIG_FILE)
+func Read() (*Config, error) {
+	return parseConfigFile(configFilePath)
 }
 
 // Parse the Terragrunt config file at the given path
-func parseTerragruntConfigFile(configPath string) (*TerragruntConfig, error) {
+func parseConfigFile(configPath string) (*Config, error) {
 	bytes, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		return nil, errors.WithStackTraceAndPrefix(err, "Error reading Terragrunt config file %s", configPath)
 	}
 
-	config, err := parseTerragruntConfig(string(bytes))
+	config, err := parseConfigString(string(bytes))
 	if err != nil {
 		return nil, errors.WithStackTraceAndPrefix(err, "Error parsing Terragrunt config file %s", configPath)
 	}
@@ -37,26 +51,31 @@ func parseTerragruntConfigFile(configPath string) (*TerragruntConfig, error) {
 }
 
 // Parse the Terragrunt config contained in the given string
-func parseTerragruntConfig(config string) (*TerragruntConfig, error) {
-	terragruntConfig := &TerragruntConfig{}
-
-	if err := hcl.Decode(terragruntConfig, config); err != nil {
+func parseConfigString(configSrc string) (*Config, error) {
+	f := &fileConfig{}
+	if err := hcl.Decode(f, configSrc); err != nil {
 		return nil, errors.WithStackTrace(err)
 	}
 
-	if terragruntConfig.DynamoDbLock != nil {
-		terragruntConfig.DynamoDbLock.FillDefaults()
-		if err := terragruntConfig.DynamoDbLock.Validate(); err != nil {
-			return nil, err
+	c := &Config{}
+
+	if lconf := f.Lock; lconf != nil {
+		lock, err := lookupLock(lconf.Backend, lconf.Config)
+		if err != nil {
+			return nil, fmt.Errorf("unable to configure lock %s: %s", lconf.Backend, err)
 		}
+
+		c.Lock = lock
 	}
 
-	if terragruntConfig.RemoteState != nil {
-		terragruntConfig.RemoteState.FillDefaults()
-		if err := terragruntConfig.RemoteState.Validate(); err != nil {
+	if f.RemoteState != nil {
+		f.RemoteState.FillDefaults()
+		if err := f.RemoteState.Validate(); err != nil {
 			return nil, err
 		}
+
+		c.RemoteState = f.RemoteState
 	}
 
-	return terragruntConfig, nil
+	return c, nil
 }
