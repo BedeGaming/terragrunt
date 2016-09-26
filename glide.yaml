@@ -5,11 +5,13 @@ owners:
 import:
 - package: github.com/urfave/cli
 - package: github.com/hashicorp/hcl
-- package: github.com/stretchr/testify/assert
+- package: github.com/stretchr/testify
+  subpackages:
+  - assert
 - package: github.com/go-errors/errors
 - package: github.com/aws/aws-sdk-go
   version: 1.4.14
-  repo:    git@github.com:aws/aws-sdk-go
+  repo: git@github.com:aws/aws-sdk-go
   subpackages:
   - aws
   - aws/defaults
@@ -17,3 +19,11 @@ import:
   - aws/awserr
   - aws/service/dynamodb
   - aws/service/s3
+- package: github.com/satori/go.uuid
+  version: ^1.1.0
+- package: github.com/Azure/azure-sdk-for-go
+  version: f71edc09d9bf5a3559323e01383b5ed294fab2e8
+  subpackages:
+  - storage
+- package: github.com/satori/uuid
+  version: ^1.1.0

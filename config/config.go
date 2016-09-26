@@ -25,8 +25,8 @@ type terragruntConfigFile struct {
 
 // LockConfig represents generic configuration for Lock providers
 type LockConfig struct {
-	Backend string            `hcl:"backend"`
-	Config  map[string]string `hcl:"config"`
+	Backend string                 `hcl:"backend"`
+	Config  map[string]interface{} `hcl:"config"`
 }
 
 // ReadTerragruntConfig the Terragrunt config file from its default location

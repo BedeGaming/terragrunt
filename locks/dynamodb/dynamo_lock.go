@@ -22,11 +22,11 @@ type DynamoDbLock struct {
 }
 
 // New is the factory function for DynamoDbLock
-func New(conf map[string]string) (locks.Lock, error) {
+func New(conf map[string]interface{}) (locks.Lock, error) {
 	lock := &DynamoDbLock{
-		StateFileId:    conf["state_file_id"],
-		AwsRegion:      conf["aws_region"],
-		TableName:      conf["table_name"],
+		StateFileId:    conf["state_file_id"].(string),
+		AwsRegion:      conf["aws_region"].(string),
+		TableName:      conf["table_name"].(string),
 		MaxLockRetries: 0,
 	}
 
@@ -34,7 +34,7 @@ func New(conf map[string]string) (locks.Lock, error) {
 		return nil, errors.WithStackTrace(StateFileIdMissing)
 	}
 
-	if confMaxRetries := conf["max_lock_retries"]; confMaxRetries != "" {
+	if confMaxRetries := conf["max_lock_retries"].(string); confMaxRetries != "" {
 		maxRetries, err := strconv.Atoi(confMaxRetries)
 		if err != nil {
 			return nil, errors.WithStackTrace(&InvalidMaxLockRetriesValue{err})

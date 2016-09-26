@@ -5,18 +5,19 @@ import (
 
 	"github.com/gruntwork-io/terragrunt/errors"
 	"github.com/gruntwork-io/terragrunt/locks"
+	"github.com/gruntwork-io/terragrunt/locks/azure"
 	"github.com/gruntwork-io/terragrunt/locks/dynamodb"
 )
 
 // lockFactory provides an implementation of Lock with the provided configuration map
-type lockFactory func(map[string]string) (locks.Lock, error)
+type lockFactory func(map[string]interface{}) (locks.Lock, error)
 
 // ErrLockNotFound is the error returned if no Lock implementation could be found
 // for the specified name
 var ErrLockNotFound = fmt.Errorf("no Lock implementation found")
 
 // lookupLock returns the implementation for the named lock or returns ErrLockNotFound
-func lookupLock(name string, conf map[string]string) (locks.Lock, error) {
+func lookupLock(name string, conf map[string]interface{}) (locks.Lock, error) {
 	factory, containsFactory := builtinLocks[name]
 	if !containsFactory {
 		return nil, errors.WithStackTrace(ErrLockNotFound)
@@ -26,5 +27,6 @@ func lookupLock(name string, conf map[string]string) (locks.Lock, error) {
 }
 
 var builtinLocks = map[string]lockFactory{
-	"dynamodb": dynamodb.New,
+	"dynamodb":   dynamodb.New,
+	"azure_blob": azure.New,
 }
